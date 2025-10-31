@@ -326,6 +326,30 @@ def del_select_history():
     result = delete_multiple_history(history_ids)
     return jsonify({"message": result})
 
+# Save history (stores AI summary/transcript for the logged-in user)
+@app.route("/save-history", methods=["POST"])
+@jwt_required()
+def save_history_route():
+    try:
+        user_id = get_jwt_identity()
+        data = request.get_json() or {}
+        message = data.get("message") or data.get("history") or ""
+        title = data.get("title") or data.get("heading") or "Transcription Summary"
+
+        if not message or not isinstance(message, str):
+            return jsonify({"error": "message is required"}), 400
+
+        doc = {
+            "user_id": user_id,
+            "title": title,
+            "history": message,
+            "created_at": datetime.datetime.utcnow()
+        }
+        ins = history_collection.insert_one(doc)
+        return jsonify({"message": "saved", "_id": str(ins.inserted_id)}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # Email Route
 @app.route("/send-pdf-email", methods=["POST"])
 @jwt_required()
